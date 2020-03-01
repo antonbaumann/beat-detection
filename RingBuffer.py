@@ -9,7 +9,7 @@ class RingBuffer:
 		self.index += 1
 
 	def values(self) -> list:
-		return self.data
+		return self.data[self.index:] + self.data[:self.index]
 
 	def is_ready(self) -> bool:
 		return self.index >= self.size

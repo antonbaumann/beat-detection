@@ -1,8 +1,15 @@
-from scipy.io.wavfile import read
+import time
+
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.io.wavfile import read
+
 import RingBuffer
-import time
+
+'''
+https://mziccard.me/2015/05/28/beats-detection-algorithms-1/
+http://archive.gamedev.net/archive/reference/programming/features/beatdetection/index.html
+'''
 
 
 def read_wav_file(path):
@@ -22,7 +29,7 @@ def calculate_energy(data) -> float:
 
 def main():
 	print('reading file ...')
-	rate, data = read_wav_file("testdata/120bpm_metronome.wav")
+	rate, data = read_wav_file("testdata/bad_guy.wav")
 
 	second_start = 0
 	second_end = 10
@@ -33,7 +40,7 @@ def main():
 	# init ring buffer
 	seconds = 1
 	frames = rate * seconds
-	block_size = 2048
+	block_size = 1024
 	buffer_size = frames // block_size
 
 	print(f'frames:     {frames}')
@@ -47,13 +54,15 @@ def main():
 
 	time_start = time.time()
 	while index < len(data) - block_size:
-		# calculate average energy in buffer
-		values = ring_buffer.values()
-		avg = sum(values) / len(values)
-
 		# calculate current energy
-		block = data[index:index+block_size]
+		block = data[index:index + block_size]
 		energy = calculate_energy(block)
+		ring_buffer.put(energy)
+
+		values = ring_buffer.values()[:-1]
+
+		# calculate average energy in buffer
+		avg = sum(values) / len(values)
 
 		# calculate variance
 		variance = sum([np.square(e - avg) for e in values]) / buffer_size
@@ -63,11 +72,10 @@ def main():
 		if ring_buffer.is_ready() and energy > avg * c:
 			peaks.append(index)
 
-		ring_buffer.put(energy)
 		index += block_size
 
 	time_end = time.time()
-	print(f'took {time_end-time_start} seconds for {second_end-second_start} seconds of audio')
+	print(f'took {time_end - time_start} seconds for {second_end - second_start} seconds of audio')
 
 	fig, ax = plt.subplots()
 
